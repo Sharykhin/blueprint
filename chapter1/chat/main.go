@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
+	"github.com/Sharykhin/blueprint/chapter1/trace"
 	"github.com/stretchr/gomniauth"
 	"github.com/stretchr/gomniauth/providers/facebook"
 	"github.com/stretchr/gomniauth/providers/github"
 	"github.com/stretchr/gomniauth/providers/google"
 	"github.com/stretchr/objx"
-	"gitlab.com/Sharykhin/blueprint/chapter1/trace"
 	"log"
 	"net/http"
 	"os"
@@ -47,7 +47,7 @@ func main() {
 		google.New("368652478209-279dphg6ie53aqd4jkt08ktsf941s5sb.apps.googleusercontent.com", "J8Kh2zu7_TqMPX8WU1IgfCjq",
 			"http://localhost:8080/auth/callback/google"),
 	)
-	r := newRoom()
+	r := newRoom(UseFileSystemAvatar)
 	r.tracer = trace.New(os.Stdout)
 	// TODO: figure out why passing by value create new instance each time?
 	http.Handle("/", MustAuth(&templateHandler{filename: "chat.html"}))
@@ -63,7 +63,11 @@ func main() {
 		w.Header().Set("Location", "/chat")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	})
+
+	http.Handle("/upload", &templateHandler{filename: "upload.html"})
+	http.HandleFunc("/uploader", uploaderHandler)
 	http.Handle("/room", r)
+	http.Handle("/avatars/", http.StripPrefix("/avatars/", http.FileServer(http.Dir("./avatars"))))
 
 	go r.run()
 	log.Println("Starting web serve on", *addr)
