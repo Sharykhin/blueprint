@@ -16,6 +16,12 @@ import (
 	"text/template"
 )
 
+var avatars Avatar = TryAvatars{
+	UseFileSystemAvatar,
+	UseAuthAvatar,
+	UseGravatar,
+}
+
 type templateHandler struct {
 	once     sync.Once
 	filename string
@@ -47,7 +53,8 @@ func main() {
 		google.New("368652478209-279dphg6ie53aqd4jkt08ktsf941s5sb.apps.googleusercontent.com", "J8Kh2zu7_TqMPX8WU1IgfCjq",
 			"http://localhost:8080/auth/callback/google"),
 	)
-	r := newRoom(UseFileSystemAvatar)
+
+	r := newRoom()
 	r.tracer = trace.New(os.Stdout)
 	// TODO: figure out why passing by value create new instance each time?
 	http.Handle("/", MustAuth(&templateHandler{filename: "chat.html"}))
