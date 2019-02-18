@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 var db *mgo.Session
@@ -33,6 +34,32 @@ func main() {
 	}()
 
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	if err := dialdb(); err != nil {
+		log.Fatalln("failed to dial mongoDB", err)
+	}
+	defer closedb()
+
+	votes := make(chan string)
+	publisherStoppedChan := publishVotes(votes)
+	twitterStoppedChan := startTwitterStream(stopChan, votes)
+
+	go func() {
+		for {
+			time.Sleep(1 * time.Minute)
+			closeConn()
+			stoplock.Lock()
+			if stop {
+				stoplock.Unlock()
+				return
+			}
+			stoplock.Unlock()
+		}
+	}()
+
+	<-twitterStoppedChan
+	close(votes)
+	<-publisherStoppedChan
 }
 
 func dialdb() error {
